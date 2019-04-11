@@ -10,10 +10,10 @@ Besturing Scorebord
 #include <WebServer.h>
 #include <FastLED.h>
 
-#define DATA_PIN_1      1 // DATA PIN voor het eerste cijfer
-#define DATA_PIN_2      13 // DATA PIN voor het tweede cijfer
-#define DATA_PIN_3      3 // DATA PIN voor het derde cijfer
-#define DATA_PIN_4      4 // DATA PIN voor het vierde cijfer
+#define DATA_PIN_1      13 // DATA PIN voor het eerste cijfer
+#define DATA_PIN_2      12 // DATA PIN voor het tweede cijfer
+#define DATA_PIN_3      14 // DATA PIN voor het derde cijfer
+#define DATA_PIN_4      27 // DATA PIN voor het vierde cijfer
 #define DATA_PIN_5      5 // DATA PIN voor speleraanduiding
 
 #define LED_TYPE           WS2812B
@@ -71,7 +71,6 @@ void setup() {
   Serial.println("IP adres: ");
   Serial.println(WiFi.localIP());
    
-  server.on("/zetspeler", ontvangSpelerData);
   server.on("/zetscore", ontvangScoreData);
   
   server.begin();
@@ -108,46 +107,13 @@ void loop(void){
   delay(500);   
 }
 
-/* ------------------------------------------------------------------------------ */
-void ontvangSpelerData() {
 
-  String speler = server.arg("Speler");
-  String msg = "DATA ONTVANGEN: Speler = " + speler;
-  server.send(200, "text/plain", msg);
-
-  if(speler == "A" | speler == "B") {
-    zetSpeler(speler);
-  }
-
-}
-
-/* ------------------------------------------------------------------------------ */
-void zetSpeler (String speler) {
-
- fill_solid(leds_speler, AANTAL_LEDS_SPELER, CRGB::Black);
- FastLED.show();
-
- int segmentA = AANTAL_LEDS_SPELER/2;
- int segmentB = AANTAL_LEDS_SPELER;
-
- if(speler == "A") {
-  for(int i=0; i<segmentA; i++) {
-   leds_speler[i] = CRGB(255,0,0);
-  }
- }
- else if(speler == "B") {
-  for(int i=segmentA+1; i<segmentB; i++) {
-   leds_speler[i] = CRGB(255,0,0);   
-  }
- }
- FastLED.show();
-
-}
 /* ------------------------------------------------------------------------------ */
 void ontvangScoreData() {
   
   String score_a = server.arg("ScoreA");
   String score_b = server.arg("ScoreB");
+  String speler  = server.arg("Speler");
   String msg = "";
   int httpcode;
   
@@ -156,11 +122,13 @@ void ontvangScoreData() {
   Serial.println(score_a);
   Serial.print("Score B: ");
   Serial.println(score_b);
+  Serial.print("Speler: ");
+  Serial.println(speler);
 
-
+  
   if(score_a != "" && score_b != "") {
-    zetScore(score_a.toInt(), score_b.toInt());
-    msg = "DATA ONTVANGEN: Score A = " + score_a + " / Score B = " + score_b;
+    zetScore(score_a.toInt(), score_b.toInt(), speler);
+    msg = "DATA ONTVANGEN: Score A = " + score_a + " / Score B = " + score_b + " / Speler = " + speler;
     httpcode = 200;
   }
   else {
@@ -174,25 +142,33 @@ void ontvangScoreData() {
 }
 /* ------------------------------------------------------------------------------ */
 
-void zetScore (int score_a, int score_b) {
+void zetScore (int score_a, int score_b, String speler) {
   
   int score_1 = score_a / 10;
   int score_2 = score_a % 10;
   int score_3 = score_b / 10;
   int score_4 = score_b % 10;
+  CRGB kleur_spelerA = CRGB::Red;
+  CRGB kleur_spelerB = CRGB::Red;
 
-  zetCijfer(leds_cijfer1, score_1);
-  zetCijfer(leds_cijfer2, score_2);
-  zetCijfer(leds_cijfer3, score_3);
-  zetCijfer(leds_cijfer4, score_4);
+  if (speler == "A") {
+    kleur_spelerA = CRGB::Green;
+  } else if (speler == "B") {
+    kleur_spelerB = CRGB::Green;
+  }
+
+  zetCijfer(leds_cijfer1, score_1, kleur_spelerA);
+  zetCijfer(leds_cijfer2, score_2, kleur_spelerA);
+  zetCijfer(leds_cijfer3, score_3, kleur_spelerB);
+  zetCijfer(leds_cijfer4, score_4, kleur_spelerB);
 }
 
-void zetCijfer (CRGB leds[AANTAL_LEDS_CIJFER], int waarde)
+void zetCijfer (CRGB leds[AANTAL_LEDS_CIJFER], int waarde, CRGB kleur)
 {
   int count = 0;
   for(int j=0; j<7; j++) { 
     for(int k=0; k<6; k++) {
-      if(cijfers[waarde][j] == 1) leds[count] = CRGB::Red;
+      if(cijfers[waarde][j] == 1) leds[count] = kleur;
       else leds[count] = CRGB::Black;
 
       count++;
